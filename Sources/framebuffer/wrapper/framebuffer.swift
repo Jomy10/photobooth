@@ -5,10 +5,10 @@ import Glibc
 public final class Framebuffer {
     public final var fd: Int32 = -1
     public final let dev: UnsafeMutablePointer<modeset_dev>
-    public final let bufferSize: Int
+    // public final let bufferSize: Int
     public final let gpuCard = "/dev/dri/by-path/platform-gpu-card"
     public final let size:  (width: Int32, height: Int32)
-
+    
     public enum Error: Swift.Error {
         case DRMDeviceCreationFailed
         case DRMDevicePrepareFailed
@@ -19,7 +19,7 @@ public final class Framebuffer {
         var ret: Int32 = -1
         var iter: UnsafeMutablePointer<modeset_dev>? = nil
 
-        ret = modeset_open(&self.fd, card)
+        ret = modeset_open(&self.fd, self.gpuCard)
         if (ret != 0) {
             throw Self.Error.DRMDeviceCreationFailed
         }
@@ -34,13 +34,13 @@ public final class Framebuffer {
         while let dev = iter {
             print("Device: \(dev)")
             dev.pointee.saved_crtc = drmModeGetCrtc(self.fd, dev.pointee.crtc)
-            guard let buf = modeset_dev_front_buf(&dev) else {
+            guard let buf = modeset_dev_front_buf(dev) else {
                 throw Self.Error.noBuffer(for: dev)
             }
             ret = drmModeSetCrtc(
                 self.fd,
                 dev.pointee.crtc,
-                dev.pointee.fb,
+                buf.pointee.fb,
                 0, 0, // x, y
                 withUnsafeMutablePointer(to: &dev.pointee.conn) { $0 },
                 1,
@@ -56,14 +56,13 @@ public final class Framebuffer {
             width: Int32(self.dev.pointee.bufs.0.width),
             height: Int32(self.dev.pointee.bufs.0.height)
         )
-        self.bufferSize = Int(self.size.w * self.size.h)
     }
 
     public func swapBuffers() throws {
         let ret = drmModeSetCrtc(
             self.fd,
             self.dev.pointee.crtc,
-            modeset_dev_back_buf(&dev).pointee.fb,
+            modeset_dev_back_buf(self.dev).pointee.fb,
             0, 0,
             withUnsafeMutablePointer(to: &dev.pointee.conn) { $0 },
             1,
@@ -77,7 +76,7 @@ public final class Framebuffer {
     }
 
     public var backBuffer: UnsafeMutablePointer<modeset_buf> {
-        modeset_dev_back_buf(&dev)
+        modeset_dev_back_buf(self.dev)
     }
 
     deinit {
