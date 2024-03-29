@@ -9,7 +9,7 @@ let package = Package(
         .package(url: "https://github.com/jomy10/swift-cairo", branch: "main"),
         .package(url: "https://github.com/fwcd/swift-utils.git", from: "3.0.0"),
 
-        .package(url: "https://github.com/troughton/Cstb", branch: "main"),
+        // .package(url: "https://github.com/troughton/Cstb", branch: "main"),
     ],
     targets: [
         .executableTarget(
@@ -18,14 +18,15 @@ let package = Package(
                 "Framebuffer",
                 "drm",
 
-                "Input",
+                "PhotoboothGraphics",
 
+                "Input",
+                
+                // TODO: remove
                 .product(name: "CairoGraphics", package: "swift-graphics"),
                 .product(name: "Cairo", package: "swift-cairo"),
                 .product(name: "Utils", package: "swift-utils"),
-
-                .product(name: "stb_image", package: "Cstb"),
-                .product(name: "stb_image_resize", package: "Cstb"),
+                "CairoJPG",
             ]
         ),
 
@@ -57,8 +58,20 @@ let package = Package(
         // Graphics //
         .target(
             name: "CairoJPG",
-            path: "Sources/Graphics/CairoJPG",
-            publicHeadersPath: "Sources/Graphics/CairoJPG/src"
+            path: "Sources/Graphics/CairoJPG"
+        ),
+        .target(
+            name: "PhotoboothGraphics",
+            dependencies: [
+                .product(name: "CairoGraphics", package: "swift-graphics"),
+                .product(name: "Cairo", package: "swift-cairo"),
+                .product(name: "Utils", package: "swift-utils"),
+                "CairoJPG",
+
+                // .product(name: "stb_image", package: "Cstb"),
+                // .product(name: "stb_image_resize", package: "Cstb"),
+            ],
+            path: "Sources/Graphics/Graphics"
         ),
 
         // Multithreading //

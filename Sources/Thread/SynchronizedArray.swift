@@ -65,5 +65,11 @@ extension SynchronizedArray {
             self.array.forEach(cb)
         }
     }
+
+    public func removeAll(keepingCapacity: Bool = false) {
+        self.queue.sync {
+            self.array.removeAll(keepingCapacity: true)
+        }
+    }
 }
 

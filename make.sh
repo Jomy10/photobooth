@@ -131,10 +131,13 @@ include_dirs=(
   # "deps/opencv-$OPENCV_VERSION/include"
   # ".build/opencv"
 )
-raw_linker_flags=()
+linker_flags=()
 cflags=()
 
-# raw_linker_flags+=($(pkg-config --libs libcamera))
+cflags+=($(pkg-config --cflags cairo))
+
+linker_flags+=($(pkg-config --libs libjpeg))
+cflags+=($(pkg-config --cflags libjpeg))
 
 # libs+=$(pkg-config --libs-only-l cairo)
 # lib_dirs+=$(pkg-config --libs-only-L cairo)
@@ -202,7 +205,7 @@ case "$1" in
       swift_flags+=" -Xcc $cflag"
     done
 
-    for linker_flag in "${raw_linker_flags[@]}"; do
+    for linker_flag in "${linker_flags[@]}"; do
       swift_flags+=" -Xlinker $linker_flag"
     done
 
