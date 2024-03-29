@@ -1,6 +1,6 @@
 [submodule "deps/libdrm"]
 	path = deps/libdrm
 	url = https://github.com/grate-driver/libdrm.git
-[submodule "deps/userland"]
-	path = deps/userland
-	url = https://github.com/raspberrypi/userland
+[submodule "Sources/Graphics/CairoJPG"]
+	path = Sources/Graphics/CairoJPG
+	url = https://github.com/rahra/cairo_jpg
