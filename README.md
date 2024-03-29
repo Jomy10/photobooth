@@ -38,3 +38,7 @@ cd photobooth
 CONFIGURATION=release ./make.sh build
 ```
 
+## License
+
+GNU GPL. Dependencies may be licensed differently, please check them separately.
+

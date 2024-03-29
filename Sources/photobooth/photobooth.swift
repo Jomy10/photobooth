@@ -3,52 +3,7 @@ import drm
 import Glibc
 import Input
 import Foundation
-// import CairoGraphics
-// import Utils
-// import Cairo
-// import CairoJPG
-// import stb_image
-// import stb_image_resize
 import PhotoboothGraphics
-
-enum LogType {
-    case verbose
-    case info
-    case warning
-    case error
-}
-
-extension LogType: CustomStringConvertible {
-    var description: String {
-        switch (self) {
-            case .info: "INFO"
-            case .error: "ERROR"
-            case .warning: "WARN"
-            case .verbose: "VERBOSE"
-        }
-    }
-    
-    var level: Int {
-        switch (self) {
-            case .verbose: 0
-            case .info: 1
-            case .warning: 2
-            case .error: 3
-        }
-    }
-}
-
-var logging: [(type: LogType, date: Date, message: String)] = []
-
-let minLoggingLevel: Int = LogType.info.level
-
-func log(_ type: LogType, _ text: String) {
-    if (type.level < minLoggingLevel) { return }
-
-    let date = Date()
-    print("[\(type) \(date)] \(text)")
-    logging.append((type: type, date: date, message: text))
-}
 
 enum State {
     case idle
@@ -78,12 +33,14 @@ extension State {
 public struct Photobooth {
     public static func main() throws {
         var quit = false
+
+        let config = (try PhotoboothConfig.read(file: "config.yaml")) ?? PhotoboothConfig()
         
-        let logFile = "photobooth_log.txt"
+        let logFile = config.loggingPath!
         if !FileManager.default.fileExists(atPath: logFile) {
             FileManager.default.createFile(atPath: logFile, contents: nil, attributes: nil)
         }
-
+        
         // Write logging to a file
         let handle: FileHandle
         do {
@@ -118,7 +75,7 @@ public struct Photobooth {
         log(.info, "Log initialized")
 
         do {
-            try Photobooth.run(quit: &quit)
+            try Photobooth.run(quit: &quit, config: config)
         } catch let error {
             log(.error, "Error in main: \(error)")
         }
@@ -130,11 +87,11 @@ public struct Photobooth {
         log(.info, "Goodbye!")
     }
 
-    public static func run(quit: inout Bool) throws {
+    static func run(quit: inout Bool, config: PhotoboothConfig) throws {
         // initialize framebuffer and input //
         let fb = try Framebuffer()
         let input = try Input(windowSize: (w: Int(fb.size.width), h: Int(fb.size.height)))
-        var fileManager = try ImageFileManager(path: URL(fileURLWithPath: "images", isDirectory: true))
+        var fileManager = try ImageFileManager(path: URL(fileURLWithPath: config.imagePath!, isDirectory: true))
 
         // Fill buffers with initial color //
         // // TODO: fill with splash screen
@@ -148,20 +105,21 @@ public struct Photobooth {
 
         var errorString: String = ""
 
-        // TODO: in config file
-        let doneSentences = [
-            "Ziet er goed uit!",
-            "All done!",
-            "Kom weer wat dichterbij",
-            "Kijk eens wat een mooie foto!",
-            "Nog nooit zo'n mooie\nfoto gezien!",
-            "Benieuwd naar het resultaat?",
-        ]
+        let doneSentences = config.doneSentences!
+        // [
+        //     "Ziet er goed uit 😎",
+        //     "All done!",
+        //     "Kom weer wat dichterbij",
+        //     "Kijk eens wat een mooie foto!",
+        //     "Nog nooit zo'n mooie\nfoto gezien!",
+        //     "Benieuwd naar het resultaat?",
+        // ]
 
         // Colors //
         //                      AARRGGBB
-        let bgPixel: UInt32 = 0xFF32a8a8
-        let fgPixel: UInt32 = ~bgPixel
+        // let bgPixel: UInt32 = 0xFF32a8a8
+        let bgPixel: UInt32 = config.bgColor!
+        // let fgPixel: UInt32 = ~bgPixel
 
         // Graphics initialization //
         // Map the screen buffers to a cairo surface & create graphics contexts to draw to

@@ -11,4 +11,5 @@ DerivedData/
 cp_init.sh
 cp.rb
 RetiredSources
+config.yaml
 

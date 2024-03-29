@@ -210,7 +210,7 @@ case "$1" in
     done
 
     set -x
-    swift $1 $swift_flags
+    swift $1 -c $CONFIGURATION $swift_flags
     ;;
   "clean")
     swift package clean
