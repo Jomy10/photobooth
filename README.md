@@ -12,7 +12,18 @@
     - go to *Boot / Auto Login*
     - Select *Console Auutologin*
 4. [Install the photobooth software](#Install); either [build it from soure](#building-from-source) or [download the latest binary](#download)
-5. Start photobooth at boot: <!-- TODO -->
+5. Start photobooth at boot:
+    add the following to the end of ~/.bashrc:
+    ```sh
+    # Replace this with the path to the photobooth executable
+    PH_APP_LOC=photobooth
+    # Replace this with the path to your config file (or comment it out to
+    # not apply any configuration)
+    export PH_CONFIG=config.yaml
+    
+    # leave this line (executes the photobooth)
+    $PH_APP_LOC
+    ```
 6. Reboot the pi: `reboot`
 
 ## Install

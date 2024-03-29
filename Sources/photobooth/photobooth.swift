@@ -34,7 +34,7 @@ public struct Photobooth {
     public static func main() throws {
         var quit = false
 
-        let config = (try PhotoboothConfig.read(file: "config.yaml")) ?? PhotoboothConfig()
+        let config = (try PhotoboothConfig.read(file: ProcessInfo.processInfo.environment["PH_CONFIG"] ?? "config.yaml")) ?? PhotoboothConfig()
         
         let logFile = config.loggingPath!
         if !FileManager.default.fileExists(atPath: logFile) {
