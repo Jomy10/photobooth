@@ -56,23 +56,6 @@ extension PhotoboothGraphicsContext {
 
         // Support multiple lines
         let messages: [Substring] = message.split(separator: "\n")
-        // let textExtents: [cairo_text_extents_t] = Array<cairo_text_extents_t>.reserveCapacity(messages.count)
-        //
-        // // for (i: Int, messageSubstring: String.SubSequence) in messages.enumerated() {
-        // for i in (0..<messages.count) {
-        //     let messageSubstring: Substring = messages[i]
-        //     let _message = String(messageSubstring)
-        //
-        //     var extents = cairo_text_extents_t()
-        //     cairo_text_extents(self.innerContext.context.internalPointer, _message, &extents)
-        //
-        //     textExtents.append(extents)
-        // }
-
-        var firstExtent = cairo_text_extents_t()
-        cairo_text_extents(self.innerContext.context.internalPointer, String(messages[0]), &firstExtent)
-        let totalHeight: Double = firstExtent.height * Double(messages.count)
-        let totalYBearing: Double = firstExtent.y_bearing * Double(messages.count)
 
         for i in (0..<messages.count) {
             let messageSubstring: Substring = messages[i]
@@ -96,31 +79,11 @@ extension PhotoboothGraphicsContext {
                 default:
                     textYOffset = 0
             }
-            let textPosY: Double = middleOfScreen //- textMiddle // - (extents.height / 2) + extents.height * ((-(Double(messages.count) / 2) + Double(i)) + Double(messages.count) / 2) + extents.y_bearing
-                + textYOffset
+            let textPosY: Double = middleOfScreen + textYOffset
             self.innerContext.context.move(to: (x: textPosX, y: textPosY))
 
             self.innerContext.context.show(text: _message)
         }
-
-        // for i in (0..<messages.count) {
-        //     let messageSubstring: Substring = messages[i]
-        //     let _message = String(messageSubstring)
-        //
-        //     var extents = cairo_text_extents_t()
-        //     cairo_text_extents(self.innerContext.context.internalPointer, _message, &extents)
-        //
-        //     let textPosX: Double = Double(self.width) / 2 - (extents.width / 2 + extents.x_bearing)
-        //     let middleOfScreen: Double = Double(self.height) / 2
-        //     let textMiddle = (extents.height / 2 + extents.y_bearing)
-        //     let yOffset: Double = extents.height * Double((messages.count / 2) - (i + 1))
-        //     // let textPosY: Double = middleOfScreen - textMiddle + yOffset // * (extents.height * (Double(i) - Double(messages.count) / 2))
-        //     let extentsTotalHeight
-        //     let textPosY: Double = middleOfScreen - ((extents.height) / 2 + )
-        //     self.innerContext.context.move(to: (x: textPosX, y: textPosY))
-        //
-        //     self.innerContext.context.show(text: _message)
-        // }
     }
 
     public func drawJPEG(_ filename: String) throws {

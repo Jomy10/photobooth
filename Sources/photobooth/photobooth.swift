@@ -134,6 +134,7 @@ public struct Photobooth {
         // initialize framebuffer and input //
         let fb = try Framebuffer()
         let input = try Input(windowSize: (w: Int(fb.size.width), h: Int(fb.size.height)))
+        var fileManager = try ImageFileManager(path: URL(fileURLWithPath: "images", isDirectory: true))
 
         // Fill buffers with initial color //
         // // TODO: fill with splash screen
@@ -223,7 +224,7 @@ public struct Photobooth {
 
                 drmDropMaster(fb.fd) // leave drm so libcamera-apps can take over
 
-                let filename = "out.jpg" // TODO
+                let filename = fileManager.nextPath().relativeString
 
                 do {
                     try cameraCapture(
@@ -243,14 +244,14 @@ public struct Photobooth {
                 
                 // Show confirmation message
                 graphicsCtx.clearBackground()
-                let text: String = doneSentences[4]//[Int.random(in: 0...(doneSentences.count))]
+                let text: String = doneSentences[Int.random(in: 0...(doneSentences.count))]
                 graphicsCtx.drawText(text)
 
                 nextState = .preview
             case .preview:
                 log(.info, "Previewing image...")
 
-                let filename = "out.jpg"
+                let filename = fileManager.previousPath.relativeString
                 try graphicsCtx.drawJPEG(filename)
                 log(.info, "Image has been copied to screen")
 
