@@ -65,6 +65,7 @@ let package = Package(
             dependencies: [
                 .product(name: "CairoGraphics", package: "swift-graphics"),
                 .product(name: "Cairo", package: "swift-cairo"),
+                .product(name: "SCCCairo", package: "swift-cairo"),
                 .product(name: "Utils", package: "swift-utils"),
                 "CairoJPG",
 

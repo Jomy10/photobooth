@@ -66,7 +66,8 @@ extension State {
     var sleepTime: UInt32? {
         switch (self) {
             case .readyToTakePicture: 1
-            case .preview: 10
+            case .takingPicture: 2
+            case .preview: 7
             case .error: 10
             default: nil
         }
@@ -145,6 +146,16 @@ public struct Photobooth {
         var nextState: State = .idle
 
         var errorString: String = ""
+
+        // TODO: in config file
+        let doneSentences = [
+            "Ziet er goed uit!",
+            "All done!",
+            "Kom weer wat dichterbij",
+            "Kijk eens wat een mooie foto!",
+            "Nog nooit zo'n mooie\nfoto gezien!",
+            "Benieuwd naar het resultaat?",
+        ]
 
         // Colors //
         //                      AARRGGBB
@@ -232,22 +243,7 @@ public struct Photobooth {
                 
                 // Show confirmation message
                 graphicsCtx.clearBackground()
-                let text: String
-                switch (Int.random(in: 0...4)) {
-                case 0:
-                    text = "Ziet er goed uit!"
-                case 1: 
-                    text = "All done!"
-                case 2: 
-                    text = "Kom weer wat dichterbij"
-                case 3:
-                    text = "Kijk eens wat een mooie foto!"
-                case 4:
-                    text = "Nog nooit zo'n mooie foto gezien!"
-                default:
-                    // unreachable
-                    exit(1)
-                }
+                let text: String = doneSentences[4]//[Int.random(in: 0...(doneSentences.count))]
                 graphicsCtx.drawText(text)
 
                 nextState = .preview
