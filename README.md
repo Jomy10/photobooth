@@ -72,12 +72,31 @@ cd photobooth
 CONFIGURATION=release ./make.sh build
 ```
 
+## Configuration
+
+The `PH_CONFIG` environment variable can be set to point to a config file. An
+example of this file:
+
+```yaml
+# Logs will be written out to this file
+loggingPath: "photobooth_log.txt"
+# Images will be saved in this folder
+imagePath: "images"
+# These will be displayed after an image has been taken
+doneSentences:
+  - All done!
+  - Curious to see the result?
+# Background color of the application
+#          AARRGGBB
+bgColor: 0xFF00FF00
+```
+
 ## License
 
 [GNU GPL](LICENSE).
 
 Photobooth: Photobooth software for touch screen devices
-Copyright (C) 2024  Jonas Everaert
+Copyright (C) 2024 Jonas Everaert
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by

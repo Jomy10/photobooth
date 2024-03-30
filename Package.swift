@@ -9,8 +9,6 @@ let package = Package(
         .package(url: "https://github.com/jomy10/swift-cairo", branch: "main"),
         .package(url: "https://github.com/fwcd/swift-utils.git", from: "3.0.0"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "5.1.0")
-
-        // .package(url: "https://github.com/troughton/Cstb", branch: "main"),
     ],
     targets: [
         .executableTarget(
@@ -65,9 +63,6 @@ let package = Package(
                 .product(name: "SCCCairo", package: "swift-cairo"),
                 .product(name: "Utils", package: "swift-utils"),
                 "CairoJPG",
-
-                // .product(name: "stb_image", package: "Cstb"),
-                // .product(name: "stb_image_resize", package: "Cstb"),
             ],
             path: "Sources/Graphics/Graphics"
         ),

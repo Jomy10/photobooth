@@ -36,7 +36,7 @@ public struct Photobooth {
 
         let config = (try PhotoboothConfig.read(file: ProcessInfo.processInfo.environment["PH_CONFIG"] ?? "config.yaml")) ?? PhotoboothConfig()
         
-        let logFile = config.loggingPath!
+        let logFile = config.loggingPath
         if !FileManager.default.fileExists(atPath: logFile) {
             FileManager.default.createFile(atPath: logFile, contents: nil, attributes: nil)
         }
@@ -91,12 +91,7 @@ public struct Photobooth {
         // initialize framebuffer and input //
         let fb = try Framebuffer()
         let input = try Input(windowSize: (w: Int(fb.size.width), h: Int(fb.size.height)))
-        var fileManager = try ImageFileManager(path: URL(fileURLWithPath: config.imagePath!, isDirectory: true))
-
-        // Fill buffers with initial color //
-        // // TODO: fill with splash screen
-        // buffer = fb.backBuffer
-        // memset(buffer.pointee.map, 200, Int(buffer.pointee.size))
+        var fileManager = try ImageFileManager(path: URL(fileURLWithPath: config.imagePath, isDirectory: true))
 
         drmSetMaster(fb.fd)
         
@@ -105,20 +100,12 @@ public struct Photobooth {
 
         var errorString: String = ""
 
-        let doneSentences = config.doneSentences!
-        // [
-        //     "Ziet er goed uit 😎",
-        //     "All done!",
-        //     "Kom weer wat dichterbij",
-        //     "Kijk eens wat een mooie foto!",
-        //     "Nog nooit zo'n mooie\nfoto gezien!",
-        //     "Benieuwd naar het resultaat?",
-        // ]
+        let doneSentences = config.doneSentences
 
         // Colors //
         //                      AARRGGBB
         // let bgPixel: UInt32 = 0xFF32a8a8
-        let bgPixel: UInt32 = config.bgColor!
+        let bgPixel: UInt32 = config.bgColor
         // let fgPixel: UInt32 = ~bgPixel
 
         // Graphics initialization //
@@ -154,8 +141,6 @@ public struct Photobooth {
             log(.verbose, "Input processedd")
 
             // Update UI //
-            let buffer = fb.backBuffer // buffer object
-
             switch (state) {
             case .idle:
                 break
@@ -202,7 +187,7 @@ public struct Photobooth {
                 
                 // Show confirmation message
                 graphicsCtx.clearBackground()
-                let text: String = doneSentences[Int.random(in: 0...(doneSentences.count))]
+                let text: String = doneSentences[Int.random(in: 0..<(doneSentences.count))]
                 graphicsCtx.drawText(text)
 
                 nextState = .preview
@@ -219,6 +204,11 @@ public struct Photobooth {
                 
                 // Show error
                 graphicsCtx.clearBackground()
+                var s = "ERROR: \(errorString)"
+                let size: Int = s.count / 3
+                s.insert("\n", at: s.index(s.startIndex, offsetBy: s.count - size))
+                s.insert("\n", at: s.index(s.startIndex, offsetBy: s.count - 2 * size))
+                graphicsCtx.drawText(s, textSize: 50, fontWeight: .normal)
 
                 nextState = .home
             }
