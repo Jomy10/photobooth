@@ -9,6 +9,7 @@ A photobooth application for the Raspberry Pi and the Pi Camera Module.
 - [Install](#install)
     - [Download](#download)
     - [Building from source](#building-from-source)
+- [Configuration](#configuration)
 - [Licensse](#license)
 
 ## Setup
@@ -45,13 +46,27 @@ also works on a different hardware configuration.
     
     # Replace this with the path to the photobooth executable
     # This line will start the application
-    photobooth
+    Photobooth
     ```
 6. Reboot the pi: `reboot`
 
 ## Install
 
 ### Download
+
+Pre-compiled binaries can be found in the [the latest release](https://github.com/Jomy10/photobooth/releases/latest).
+
+You can also use this one-liner to download the latest release:
+```sh
+wget \
+    "$( \
+        curl -s https://api.github.com/repos/jomy10/photobooth/releases/latest |
+        jq -r '.assets[] | select(.name=="Photobooth") | .browser_download_url' \
+    )" -o Photobooth &&
+    chmod +x Photobooth
+```
+
+The command requires `jq` to parse json, which can be downloaded with `sudo apt-get install jq`
 
 ### Building from source
 
@@ -70,6 +85,8 @@ cd photobooth
 
 # Compile the code
 CONFIGURATION=release ./make.sh build
+
+# The application is now located at .build/release/Photobooth
 ```
 
 ## Configuration
@@ -91,11 +108,36 @@ doneSentences:
 bgColor: 0xFF00FF00
 ```
 
+### Removing old logs
+
+You can add the following script to your home directory (in this example in `save_log.sh`):
+```sh
+if [ -f photobooth_log.txt ]; then
+        if [ -f photobooth_log_prev2.txt ]; then
+                rm photobooth_log_prev2.txt
+        fi
+        if [ -f photobooth_log_prev.txt ]; then
+                mv photobooth_log_prev.txt photobooth_log_prev2.txt
+        fi
+        mv photobooth_log.txt photobooth_log_prev.txt
+fi
+```
+
+Make it executable:
+```sh
+chmod +x save_log.sh
+```
+
+Then add the following line to cron using `crontab -e`:
+```cron
+@reboot /home/photobooth/save_log.sh
+```
+
 ## License
 
 [GNU GPL](LICENSE).
 
-Photobooth: Photobooth software for touch screen devices
+Photobooth: Photobooth software for touch screen devices<br/>
 Copyright (C) 2024 Jonas Everaert
 
 This program is free software: you can redistribute it and/or modify

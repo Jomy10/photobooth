@@ -44,6 +44,9 @@ struct PhotoboothConfig: Codable {
         if let bgColor = try container.decodeIfPresent(UInt32.self, forKey: .bgColor) {
             self.bgColor = bgColor
         }
+        if let clearLog = try container.decodeIfPresent(UInt32.self, forKey: .clearLog) {
+            self.clearLog = clearLog
+        }
         log(.info, "Configuration read: \(self)")
     }
 }
