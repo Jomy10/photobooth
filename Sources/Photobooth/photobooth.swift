@@ -35,7 +35,8 @@ public struct Photobooth {
         var quit = false
 
         let config = (try PhotoboothConfig.read(file: ProcessInfo.processInfo.environment["PH_CONFIG"] ?? "config.yaml")) ?? PhotoboothConfig()
-        
+
+        log(.info, "Saving logs to \(config.loggingPath)")
         let logFile = config.loggingPath
         if !FileManager.default.fileExists(atPath: logFile) {
             FileManager.default.createFile(atPath: logFile, contents: nil, attributes: nil)
@@ -91,6 +92,7 @@ public struct Photobooth {
         // initialize framebuffer and input //
         let fb = try Framebuffer()
         let input = try Input(windowSize: (w: Int(fb.size.width), h: Int(fb.size.height)))
+        log(.info, "Images will be saved to \(config.imagePath)")
         var fileManager = try ImageFileManager(path: URL(fileURLWithPath: config.imagePath, isDirectory: true))
 
         drmSetMaster(fb.fd)
