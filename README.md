@@ -74,5 +74,29 @@ CONFIGURATION=release ./make.sh build
 
 ## License
 
-GNU GPL. Dependencies may be licensed differently, please check them separately.
+[GNU GPL](LICENSE).
+
+Photobooth: Photobooth software for touch screen devices
+Copyright (C) 2024  Jonas Everaert
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+Dependencies may be licensed differently:
+- [cairo_jpeg](Sources/Graphisc/CairoJPEG): GNU LGPLv3
+- [libdrm](deps/libdrm): MIT
+- [swift-graphics](https://github.com/jomy10/swift-graphics): MIT
+- [swift-cairo](https://github.com/jomy10/swift-cairo): MIT
+- [swift-utils](https://github.com/fwcd/swift-utils): MIT
+- [Yams](https://github.com/jpsim/Yams): MIT
 
