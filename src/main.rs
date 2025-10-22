@@ -10,10 +10,11 @@ use libcamera::request::ReuseFlag;
 use log::*;
 use photobooth::camera::{Camera, CameraManager};
 use photobooth::display::Display;
-use photobooth::ui::UI;
+use photobooth::input::{InputManager, TouchInputEvent};
+use photobooth::ui::{UIElement, UI};
 
 struct State {
-    show_video_stream: bool
+    show_video_stream: bool,
 }
 
 impl State {
@@ -53,10 +54,13 @@ fn configure_logging() -> Result<()> {
     if let Some(logfile) = logfile {
         config = config.appender(log4rs::config::Appender::builder().build("logfile", Box::new(logfile)));
     }
-    let config = config.build(log4rs::config::Root::builder()
-        .appenders(["logfile", "stdout"])
-        .build(LevelFilter::Info)
-    )?;
+    let root = log4rs::config::Root::builder()
+            .appenders(["logfile", "stdout"]);
+    #[cfg(not(debug_assertions))]
+    let root = root.build(LevelFilter::Info);
+    #[cfg(debug_assertions)]
+    let root = root.build(LevelFilter::Trace);
+    let config = config.build(root)?;
 
     _ = log4rs::init_config(config)?;
 
@@ -76,6 +80,8 @@ fn get_config() -> Result<photobooth::config::Config> {
         info!("Configuration file not found, using default");
         Default::default()
     };
+
+    info!("Config: {:#?}", config);
 
     return Ok(config);
 }
@@ -97,6 +103,8 @@ fn main() -> Result<()> {
     info!("Initializing DRM (display)");
     let mut disp = Display::new("/dev/dri/by-path/platform-gpu-card", format_drm, 24, 32)?;
 
+    info!("Initialized display {}x{}", disp.size().0, disp.size().1);
+
     info!("Initializing camera");
     let cam_manager = CameraManager::acquire()?;
     let mut camera = Camera::new(&cam_manager, format_u32)?;
@@ -104,11 +112,30 @@ fn main() -> Result<()> {
     camera.queue_video_requests()?;
     let rx = camera.on_request_receiver();
 
-    let mut ui = UI::new((disp.size().0 as usize, disp.size().1 as usize));
+    let (mut ui, touch_sender) = UI::new((disp.size().0 as usize, disp.size().1 as usize));
 
-    let textbox = ui.add_text_box((0., 0.), (100., 100.), fontdue::layout::HorizontalAlign::Left, fontdue::layout::VerticalAlign::Top);
-    textbox.borrow_mut().add_text("Hello ", 35.0);
-    textbox.borrow_mut().add_text("world!", 40.0);
+    // Initial UI
+    let textbox = ui.add_text_box((0., 0.), (disp.size().0 as f32, disp.size().1 as f32), fontdue::layout::HorizontalAlign::Center, fontdue::layout::VerticalAlign::Middle);
+    {
+        let mut textbox = textbox.borrow_mut();
+        textbox.add_text(&config.take_picture_text, 100.);
+        textbox.add_touch_listener(Box::new(|| {
+            println!("Clicked!");
+        }));
+    }
+
+    // let textbox = ui.add_text_box((0., 0.), (100., 100.), fontdue::layout::HorizontalAlign::Left, fontdue::layout::VerticalAlign::Top);
+    // textbox.borrow_mut().add_text("Hello ", 35.0);
+    // textbox.borrow_mut().add_text("world!", 40.0);
+
+    let input = InputManager::new(
+        "/dev/input/by-id/usb-QDtech_MPI7003-event-if00".to_string(), // TODO: parameter
+        disp.size().0 as u32, disp.size().1 as u32
+    );
+    input.subscribe(touch_sender);
+
+    let (touch_sender, touch_receiver) = std::sync::mpsc::channel::<TouchInputEvent>();
+    input.subscribe(touch_sender);
 
     loop {
         let mut req: MaybeUninit<libcamera::request::Request> = MaybeUninit::uninit();

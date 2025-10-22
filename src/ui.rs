@@ -1,9 +1,13 @@
 use std::rc::Rc;
 use std::borrow::Cow;
 use std::cell::RefCell;
+use std::sync::mpsc::{Receiver, Sender};
 
 use fontdue::layout::{CoordinateSystem, HorizontalAlign, LayoutSettings, VerticalAlign, TextStyle};
 use fontdue::Font;
+use log::*;
+
+use crate::input::TouchInputEvent;
 
 type Fonts = Rc<[Font; 1]>;
 type BoxedUIElement = Box<Rc<RefCell<dyn UIElement>>>;
@@ -12,18 +16,23 @@ pub struct UI {
     elements: Vec<BoxedUIElement>,
     size: (usize, usize),
     fonts: Fonts,
+    touch_events: Receiver<TouchInputEvent>,
 }
 
 impl UI {
-    pub fn new(size: (usize, usize)) -> Self {
+    pub fn new(size: (usize, usize)) -> (Self, Sender<TouchInputEvent>) {
         // TODO: replace
         let font = include_bytes!("../SFCamera.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
-        Self {
+
+        let (tx, rx) = std::sync::mpsc::channel();
+
+        (Self {
             elements: Vec::new(),
             size,
-            fonts: Rc::new([font])
-        }
+            fonts: Rc::new([font]),
+            touch_events: rx
+        }, tx)
     }
 
     pub fn add_text_box(&mut self, pos: (f32, f32), size: (f32, f32), hor_align: HorizontalAlign, ver_align: VerticalAlign) -> Rc<RefCell<TextBox>> {
@@ -45,20 +54,38 @@ impl UI {
             element.borrow().render(buffer, self.size)
         }
     }
+
+    pub fn update(&mut self) {
+        while let Ok(event) = self.touch_events.try_recv() {
+            for element in &self.elements {
+                let element = element.borrow();
+                if element.is_inside(event.x as f32, event.y as f32) {
+                    element.touch_listeners().iter().for_each(|cb| cb());
+                }
+            }
+        }
+    }
 }
 
-trait UIElement {
+type TouchEventListener = Box<dyn Fn() -> ()>;
+
+pub trait UIElement {
     fn render(&self, buffer: &mut [u8], buffer_size: (usize, usize));
+    fn add_touch_listener(&mut self, cb: TouchEventListener);
+    fn touch_listeners(&self) -> &Vec<TouchEventListener>;
+    fn is_inside(&self, x: f32, y: f32) -> bool;
 }
 
 pub struct TextBox {
     layout: fontdue::layout::Layout,
     fonts: Fonts,
     color: u32,
+    touch_listeners: Vec<TouchEventListener>,
 }
 
 impl TextBox {
     fn new(fonts: Fonts, pos: (f32, f32), size: (f32, f32), hor_align: HorizontalAlign, ver_align: VerticalAlign) -> TextBox {
+        trace!("New text box {:?}x{:?}", pos, size);
         let mut layout = fontdue::layout::Layout::new(CoordinateSystem::PositiveYDown);
         layout.reset(&LayoutSettings {
             x: pos.0,
@@ -74,6 +101,7 @@ impl TextBox {
             layout,
             fonts,
             color: 0xFF0000FF,
+            touch_listeners: Vec::new()
         };
     }
 
@@ -94,6 +122,19 @@ impl UIElement for TextBox {
 
             blend_font_grayscale_bitmap_to_buffer(&metrics, &bitmap, self.color, (x, y), buffer_size, buffer);
         }
+    }
+
+    fn add_touch_listener(&mut self, cb: TouchEventListener) {
+        self.touch_listeners.push(cb)
+    }
+
+    fn touch_listeners(&self) -> &Vec<TouchEventListener> {
+        &self.touch_listeners
+    }
+
+    fn is_inside(&self, x: f32, y: f32) -> bool {
+        let set = self.layout.settings();
+        return x >= set.x && y >= set.y && x <= set.x + set.max_width.unwrap() && y <= set.y + set.max_height.unwrap();
     }
 }
 

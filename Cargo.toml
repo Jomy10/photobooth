@@ -7,6 +7,7 @@ edition = "2024"
 anyhow = "1.0"
 drm = "0.14"
 fontdue = { version = "0.9", features = ["parallel", "std"] }
+input = "0.9.1"
 libc = "0.2"
 libcamera = { version = "0.4", features = ["libcamera_semver_versioning", "vendor_rpi"], default-features = false }
 log = "0.4"
