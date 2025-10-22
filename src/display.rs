@@ -6,6 +6,7 @@ use anyhow::{anyhow, Result};
 use drm::buffer::DrmFourcc;
 use drm::control::dumbbuffer::{DumbBuffer, DumbMapping};
 use drm::control::{framebuffer, Device, FbCmd2Flags};
+use log::*;
 
 /// GPU DRM
 pub struct Card(File);
@@ -89,7 +90,7 @@ impl Display {
         let crtc_handle = encoder_info.crtc()
             .ok_or_else(|| anyhow!("No active CRTC for encoder."))?;
 
-        println!("Using active CRTC: {:?}", crtc_handle);
+        info!("Using active CRTC: {:?}", crtc_handle);
 
         Ok((connector_info.handle(), mode, crtc_handle))
     }
@@ -126,16 +127,16 @@ impl Display {
         match self.card.set_crtc(self.crtc, buffer, (0, 0), &[self.connector], Some(self.mode)) {
             Ok(_) => Ok(()),
             Err(e) => {
-                println!("Failed to set CRTC {:?}: {:?}", self.crtc, e);
+                error!("Failed to set CRTC {:?}: {:?}", self.crtc, e);
 
                 // If this fails due to resource conflict, try to clear the CRTC first
                 if e.raw_os_error() == Some(28) {
-                    println!("Attempting to clear CRTC first...");
+                    info!("Attempting to clear CRTC first...");
                     // Try to disable the CRTC first, then set it again
                     if let Err(clear_err) = self.card.set_crtc(self.crtc, None, (0, 0), &[], None) {
-                        println!("Failed to clear CRTC: {:?}", clear_err);
+                        error!("Failed to clear CRTC: {:?}", clear_err);
                     } else {
-                        println!("CRTC cleared, retrying...");
+                        info!("CRTC cleared, retrying...");
                         return Ok(self.card.set_crtc(self.crtc, buffer, (0, 0), &[self.connector], Some(self.mode))?);
                     }
                 }

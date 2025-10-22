@@ -1,3 +1,5 @@
+use std::fs::File;
+use std::io::{self, BufReader};
 use std::mem::MaybeUninit;
 use std::time::Duration;
 
@@ -5,6 +7,7 @@ use anyhow::Result;
 use drm::buffer::DrmFourcc;
 use fontdue::layout::{CoordinateSystem, LayoutSettings, TextStyle, Layout};
 use libcamera::request::ReuseFlag;
+use log::*;
 use photobooth::camera::{Camera, CameraManager};
 use photobooth::display::Display;
 use photobooth::ui::UI;
@@ -21,15 +24,80 @@ impl State {
     }
 }
 
+fn configure_logging() -> Result<()> {
+    let stdout_log = log4rs::append::console::ConsoleAppender::builder()
+        .encoder(Box::new(log4rs::encode::pattern::PatternEncoder::new("{d(%H:%M:%S)} {h({l})}: {m}\n")))
+        .build();
+
+    let logfile = match log4rs::append::rolling_file::RollingFileAppender::builder()
+        .encoder(Box::new(log4rs::encode::pattern::PatternEncoder::new("{d} {M}::{f}:{L} {l}: {m}\n")))
+        .build(
+            "/var/log/photobooth.log",
+            Box::new(log4rs::append::rolling_file::policy::compound::CompoundPolicy::new(
+                Box::new(log4rs::append::rolling_file::policy::compound::trigger::size::SizeTrigger::new(10 * 1024 * 1024)), // 10 MB
+                Box::new(log4rs::append::rolling_file::policy::compound::roll::fixed_window::FixedWindowRoller::builder().build("/var/log/photobooth.{}.log", 5).unwrap()) // keep 5 old files
+            ))
+        ) {
+            Ok(v) => Some(v),
+            Err(err) => match err.kind() {
+                io::ErrorKind::PermissionDenied => {
+                    eprintln!("Could not access logfile. Create it and correct the permissions.");
+                    None
+                },
+                _ => None
+            }
+        };
+
+    let mut config = log4rs::config::Config::builder()
+        .appender(log4rs::config::Appender::builder().build("stdout", Box::new(stdout_log)));
+    if let Some(logfile) = logfile {
+        config = config.appender(log4rs::config::Appender::builder().build("logfile", Box::new(logfile)));
+    }
+    let config = config.build(log4rs::config::Root::builder()
+        .appenders(["logfile", "stdout"])
+        .build(LevelFilter::Info)
+    )?;
+
+    _ = log4rs::init_config(config)?;
+
+    info!("Photobooth logging initialized");
+
+    Ok(())
+}
+
+fn get_config() -> Result<photobooth::config::Config> {
+    let configuration_path = std::env::var_os("PH_CONFIG").unwrap_or("config.yaml".into());
+    info!("Reading configuration from {}", configuration_path.to_string_lossy());
+    let config: photobooth::config::Config = if std::fs::exists(&configuration_path)? {
+        let config_file = File::open(configuration_path)?;
+        let config_reader = BufReader::new(config_file);
+        serde_yaml::from_reader(config_reader)?
+    } else {
+        info!("Configuration file not found, using default");
+        Default::default()
+    };
+
+    return Ok(config);
+}
+
 fn main() -> Result<()> {
+    // Set up logging //
+    configure_logging()?;
+
+    // Configuration //
+    let config = get_config()?;
+
+    // Application code //
     let mut state = State::new();
     // state.show_video_stream = true;
 
     let format_drm = DrmFourcc::Xrgb8888;
     let format_u32 = u32::from_le_bytes([b'X', b'R', b'2', b'4']);
 
+    info!("Initializing DRM (display)");
     let mut disp = Display::new("/dev/dri/by-path/platform-gpu-card", format_drm, 24, 32)?;
 
+    info!("Initializing camera");
     let cam_manager = CameraManager::acquire()?;
     let mut camera = Camera::new(&cam_manager, format_u32)?;
 

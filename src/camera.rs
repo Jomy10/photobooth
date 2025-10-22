@@ -9,6 +9,7 @@ use libcamera::framebuffer::AsFrameBuffer;
 use libcamera::pixel_format::PixelFormat;
 use libcamera::stream::StreamConfigurationRef;
 use libcamera::utils::Immutable;
+use log::*;
 use ouroboros::self_referencing;
 
 #[self_referencing]
@@ -68,9 +69,9 @@ impl<'cam> Camera<'cam> {
         // drop(stream_cfg);
 
         match config.validate() {
-            libcamera::camera::CameraConfigurationStatus::Valid => println!("Camera configuration valid!"),
-            libcamera::camera::CameraConfigurationStatus::Adjusted => println!("Camera configuration was adjusted: {config:#?}"),
-            libcamera::camera::CameraConfigurationStatus::Invalid => panic!("Camera configuration invalid!"),
+            libcamera::camera::CameraConfigurationStatus::Valid => info!("Camera configuration valid!"),
+            libcamera::camera::CameraConfigurationStatus::Adjusted => info!("Camera configuration was adjusted: {config:#?}"),
+            libcamera::camera::CameraConfigurationStatus::Invalid => anyhow::bail!("Camera configuration invalid!"),
         }
         // if config.validate().is_valid() {
         //     panic!("Camera configuration validation failed");
@@ -81,7 +82,7 @@ impl<'cam> Camera<'cam> {
 
         let stream_cfg = config.get(0).unwrap();
         let stream = stream_cfg.stream().unwrap();
-        println!(
+        info!(
             "Video stream: {:?}@{} ({:?})",
             stream_cfg.get_size(),
             stream_cfg.get_stride(),
@@ -167,7 +168,7 @@ impl<'stream> VideoStream<'stream> {
     ) -> Result<Self> {
         let mut allocator = libcamera::framebuffer_allocator::FrameBufferAllocator::new(cam);
         let buffers = allocator.alloc(&video_stream)?;
-        println!("Allocated {} framebuffers", buffers.len());
+        info!("Allocated {} framebuffers", buffers.len());
 
         let requests: Vec<_> = buffers.into_iter()
             .enumerate()
