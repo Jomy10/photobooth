@@ -185,6 +185,22 @@ impl Display {
     pub fn size(&self) -> (u16, u16) {
         self.size
     }
+
+    fn buffer_size_u8(&self) -> usize {
+        (self.size.0 as usize) * (self.size.1 as usize) * 4
+    }
+
+    fn buffer_size_u32(&self) -> usize {
+        (self.size.0 as usize) * (self.size.1 as usize)
+    }
+
+    pub fn clear(&mut self, color: u32) -> Result<()> {
+        let buffer_size = self.buffer_size_u32();
+        let mut back_buffer = self.back_buffer_mut()?;
+        let back_buffer: &mut [u32] = unsafe { std::slice::from_raw_parts_mut(back_buffer.as_mut_ptr() as *mut u32, buffer_size) };
+        back_buffer[..].fill(color);
+        Ok(())
+    }
 }
 
 impl Drop for Display {
