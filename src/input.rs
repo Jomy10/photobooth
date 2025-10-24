@@ -3,10 +3,10 @@ use std::os::fd::OwnedFd;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
 use std::sync::mpsc::{TryRecvError, Sender};
-use std::sync::{Arc, Mutex, RwLock};
+use std::sync::{Arc, RwLock};
 use std::thread::JoinHandle;
 
-use input::event::touch::{self, TouchEventPosition, TouchEventTrait};
+use input::event::touch::TouchEventPosition;
 use input::event::TouchEvent;
 use input::{Event, Libinput, LibinputInterface};
 use libc::{O_RDONLY, O_RDWR, O_WRONLY};
@@ -25,10 +25,11 @@ impl LibinputInterface for Interface {
             .map_err(|err| err.raw_os_error().unwrap())
     }
     fn close_restricted(&mut self, fd: OwnedFd) {
-        File::from(fd);
+        drop(File::from(fd))
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct TouchInputEvent {
     pub x: f64,
     pub y: f64
@@ -56,7 +57,7 @@ impl InputManager {
             let mut input = Libinput::new_from_path(Interface);
             input.path_add_device(&path).unwrap();
 
-            let mut touch_start: Option<((f64, f64))> = None;
+            let mut touch_start: Option<(f64, f64)> = None;
             // motion: sequence of positions
 
             'dispatch_loop: loop {
@@ -71,19 +72,19 @@ impl InputManager {
                                     trace!("Touch down ({}, {})", x, y);
                                     touch_start = Some((x, y));
                                 },
-                                TouchEvent::Up(touch_up_event) => {
+                                TouchEvent::Up(_) => {
                                     let touch = touch_start.unwrap_or((0., 0.));
                                     trace!("Touch up {:?}", touch);
                                     let subscribers = (*subscribers2).read().unwrap();
                                     for subscriber in subscribers.iter() {
-                                        subscriber.send(TouchInputEvent{ x: touch.0, y: touch.1 });
+                                        subscriber.send(TouchInputEvent{ x: touch.0, y: touch.1 }).unwrap();
                                     }
                                 },
-                                TouchEvent::Motion(touch_motion_event) => {},
-                                TouchEvent::Cancel(touch_cancel_event) => {
+                                TouchEvent::Motion(_) => {},
+                                TouchEvent::Cancel(_) => {
                                     info!("Unhandled cancel event");
                                 },
-                                TouchEvent::Frame(touch_frame_event) => {}, // end of an event
+                                TouchEvent::Frame(_) => {}, // end of an event
                                 ev => {
                                     info!("Unhandled touch event {:#?}", ev);
                                 },

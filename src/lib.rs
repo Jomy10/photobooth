@@ -1,5 +1,8 @@
+#![feature(mpmc_channel)]
+
 pub mod camera;
 pub mod display;
 pub mod ui;
 pub mod config;
 pub mod input;
+pub mod utils;

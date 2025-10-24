@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::borrow::Cow;
 use std::cell::RefCell;
 use std::sync::mpsc::{Receiver, Sender};
 
@@ -9,7 +8,7 @@ use log::*;
 
 use crate::input::TouchInputEvent;
 
-type Fonts = Rc<[Font; 1]>;
+type Fonts = Rc<[Font; 2]>;
 type BoxedUIElement = Box<Rc<RefCell<dyn UIElement>>>;
 
 pub struct UI {
@@ -17,27 +16,39 @@ pub struct UI {
     size: (usize, usize),
     fonts: Fonts,
     touch_events: Receiver<TouchInputEvent>,
+    text_color: u32,
 }
 
 impl UI {
     pub fn new(size: (usize, usize)) -> (Self, Sender<TouchInputEvent>) {
         // TODO: replace
-        let font = include_bytes!("../SFCamera.ttf") as &[u8];
+        let font = include_bytes!("../SpaceMono-Bold.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
+        let font2 = include_bytes!("../NotoColorEmoji-Regular.ttf") as &[u8];
+        let font2 = fontdue::Font::from_bytes(font2, fontdue::FontSettings::default()).unwrap();
+
+        let fonts = Rc::new([font, font2]);
+
+        info!("using fonts {:?}", fonts);
 
         let (tx, rx) = std::sync::mpsc::channel();
 
         (Self {
             elements: Vec::new(),
             size,
-            fonts: Rc::new([font]),
-            touch_events: rx
+            fonts,
+            touch_events: rx,
+            text_color: 0xFFFFFFFF,
         }, tx)
+    }
+
+    pub fn set_text_color(&mut self, color: u32) {
+        self.text_color = color;
     }
 
     pub fn add_text_box(&mut self, pos: (f32, f32), size: (f32, f32), hor_align: HorizontalAlign, ver_align: VerticalAlign) -> Rc<RefCell<TextBox>> {
         let text_box = Rc::new(RefCell::new(
-            TextBox::new(self.fonts.clone(), pos, size, hor_align, ver_align)
+            TextBox::new(self.fonts.clone(), pos, size, hor_align, ver_align, self.text_color)
         ));
 
         self.elements.push(Box::new(text_box.clone()));
@@ -78,20 +89,20 @@ pub trait UIElement {
 
 pub struct TextBox {
     layout: fontdue::layout::Layout,
+    // The first font is the regular font, the second an emoji font
     fonts: Fonts,
     color: u32,
     touch_listeners: Vec<TouchEventListener>,
 }
 
 impl TextBox {
-    fn new(fonts: Fonts, pos: (f32, f32), size: (f32, f32), hor_align: HorizontalAlign, ver_align: VerticalAlign) -> TextBox {
-        trace!("New text box {:?}x{:?}", pos, size);
+    fn new(fonts: Fonts, pos: (f32, f32), size: (f32, f32), hor_align: HorizontalAlign, ver_align: VerticalAlign, color: u32) -> TextBox {
         let mut layout = fontdue::layout::Layout::new(CoordinateSystem::PositiveYDown);
         layout.reset(&LayoutSettings {
             x: pos.0,
             y: pos.1,
             max_width: Some(size.0),
-            max_height: Some(size.0),
+            max_height: Some(size.1),
             horizontal_align: hor_align,
             vertical_align: ver_align,
             ..Default::default()
@@ -100,7 +111,7 @@ impl TextBox {
         return TextBox {
             layout,
             fonts,
-            color: 0xFF0000FF,
+            color,
             touch_listeners: Vec::new()
         };
     }
@@ -108,12 +119,14 @@ impl TextBox {
     pub fn add_text(&mut self, text: impl AsRef<str>, font_size: f32) {
         self.layout.append(self.fonts.as_slice(), &TextStyle::new(text.as_ref(), font_size, 0));
     }
+
+    pub fn clear(&mut self) {
+        self.layout.clear();
+    }
 }
 
 impl UIElement for TextBox {
     fn render(&self, buffer: &mut [u8], buffer_size: (usize, usize)) {
-        // let start_x = 0;
-        // let start_y = 0;
         for glyph in self.layout.glyphs() {
             let (metrics, bitmap) = self.fonts[0].rasterize(glyph.parent, glyph.key.px);
 

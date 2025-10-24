@@ -3,12 +3,31 @@
 pub struct Config {
     #[serde(rename = "doneSentences")]
     pub done_sentences: Vec<String>,
+    /// Show done sentece for x seconds
+    #[serde(rename = "doneShowTime")]
+    pub done_show_time: u32,
 
     #[serde(rename = "bgColor")]
     pub bg_color: u32,
 
+    #[serde(rename = "textColor")]
+    pub text_color: u32,
+
     #[serde(rename = "takePictureText")]
     pub take_picture_text: String,
+
+    /// The default text size
+    #[serde(rename = "textSize")]
+    pub text_size: f32,
+
+    /// Countdown in seconds
+    pub countdown: u32,
+    #[serde(rename = "countdownTextSize")]
+    pub countdown_text_size: f32,
+
+    /// Show the resulting image for (minimum) x seconds
+    #[serde(rename = "showImageTime")]
+    pub show_image_time: u32,
 }
 
 impl Default for Config {
@@ -21,8 +40,14 @@ impl Default for Config {
                 "Looking good 😎",
                 "Curious to see the result?"
             ].map(|s| s.into()).to_vec(),
+            done_show_time: 5,
             bg_color: 0xFF32a8a8,
+            text_color: 0x00FFFFFF,
             take_picture_text: "Touch to take a picture".to_string(),
+            text_size: 100.,
+            countdown_text_size: 350.,
+            countdown: 5,
+            show_image_time: 5,
         }
     }
 }

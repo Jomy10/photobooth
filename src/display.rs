@@ -187,6 +187,7 @@ impl Display {
         self.size
     }
 
+    #[allow(unused)]
     fn buffer_size_u8(&self) -> usize {
         (self.size.0 as usize) * (self.size.1 as usize) * 4
     }
