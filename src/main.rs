@@ -349,10 +349,14 @@ impl<'a> App<'a> {
                 let t = Utc::now();
                 let resized_image = image_processing_thread_handle.join().map_err(|err| anyhow!("{:?}", err))??;
 
-                let dt = t - Utc::now();
+                let dt = Utc::now() - t;
+                dbg!(dt, t);
                 let sleep_time = std::time::Duration::from_secs(self.config.done_show_time as u64);
+                dbg!(sleep_time);
                 let sleep_time = (sleep_time.as_millis() as u64).saturating_sub(dt.num_milliseconds() as u64);
+                dbg!(sleep_time);
                 let sleep_time = std::time::Duration::from_millis(sleep_time);
+                dbg!(sleep_time);
                 std::thread::sleep(sleep_time);
 
                 // Show image

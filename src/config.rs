@@ -3,7 +3,7 @@
 pub struct Config {
     #[serde(rename = "doneSentences")]
     pub done_sentences: Vec<String>,
-    /// Show done sentece for x seconds
+    /// Show done sentence for x seconds
     #[serde(rename = "doneShowTime")]
     pub done_show_time: u32,
 
@@ -54,7 +54,7 @@ impl Default for Config {
                 "Looking good 😎",
                 "Curious to see the result?"
             ].map(|s| s.into()).to_vec(),
-            done_show_time: 5,
+            done_show_time: 4,
             bg_color: 0xFF32a8a8,
             error_bg_color: 0xFFed4e4e,
             text_color: 0x00FFFFFF,
@@ -62,7 +62,7 @@ impl Default for Config {
             text_size: 100.,
             countdown_text_size: 350.,
             countdown: 5,
-            show_image_time: 5,
+            show_image_time: 6,
             storage_sub_path: None,
             error_message_time: 8,
             unknown_error_message: "Unkown error".to_string(),

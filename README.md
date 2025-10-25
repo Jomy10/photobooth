@@ -54,7 +54,6 @@ also works on a different hardware configuration.
 6. Reboot the pi: `reboot`
 7. [Install the photobooth software](#install)
 8. [Configure the photobooth software](#configure)
-...
 
 # Install
 
@@ -90,9 +89,16 @@ The command requires `jq` to parse json, which can be downloaded with `sudo apt-
 
 This program uses the experimental `mpmc` channels, so it requires nightly.
 
+Download Noto Emoji and Space Mono Bold [Google fonts](https://fonts.google.com/noto/specimen/Noto+Emoji?selection.family=Noto+Color+Emoji|Noto+Emoji:wght@300..700|Space+Mono:ital,wght@0,400;0,700;1,400;1,700)
+(or change the used fonts in code) and place them in the root directory of the project.
+
+*Download Noto Emoji, not Noto Color Emoji. Color emojis are not supported*.
+
 ```sh
 cargo +nightly build --release
 ```
+
+The application will now be located at `target/release/photobooth`.
 
 # Configuration
 
@@ -135,6 +141,10 @@ Reboot if necessary:
 ```sh
 sudo reboot
 ```
+
+## Additional notes
+
+- I have used a PI with 2GB of RAM, 1GB might not be enough.
 
 ## License
 
