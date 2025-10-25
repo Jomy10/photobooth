@@ -1,3 +1,35 @@
+<div align="center">
+  <h1>SwiftCurses</h1>
+</div><br/>
+
+**Navigation**
+- [Setup](#setup)
+  - [Hardware](#hardware)
+  - [Software](#software)
+- [Install](#install)
+  - [Download](#download)
+  - [Building from source](#building-from-source)
+- [Configuration](#configuration)
+  - [Automatically mounting USB devices](#automatically-mounting-usb-devices)
+  - [Permissions](#permissions)
+  - [Boot config](#boot-config)
+- [License](#license)
+
+# Setup
+
+## Hardware
+
+The application has been tested and works on the following configuration:
+- [Raspberry Pi 4B (2GB RAM model)](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)
+- [Wimaxit M728 7" Touch Screen](https://wimaxit.com/products/wimaxit-raspberry-pi-7-touch-screen-display-monitor-1024x600-usb-powered-hdmi-screen-monitor-ips-178-with-rear-speakers-stand-for-raspberry-4-3-2-laptop-pc)
+- [Raspberry Pi Camera Module v3](https://www.raspberrypi.com/products/camera-module-3/)
+
+All three products come with the necesarry pieces to connect them together.
+
+This application has not been tested on other hardware, but I am open to pull
+requests adding support for them, or simply letting me know this application
+also works on a different hardware configuration.
+
 ## Software
 
 1. Install a new copy of **Raspbery Pi OS Lite (64-bit)** on your Raspberry Pi's SD-card
@@ -20,9 +52,14 @@
     ./photobooth
     ```
 6. Reboot the pi: `reboot`
+7. [Install the photobooth software](#install)
+8. [Configure the photobooth software](#configure)
+...
 
+# Install
 
-dependencies:
+Install the required dependencies:
+
 ```sh
 sudo apt-get install \
   libinput-dev \
@@ -32,7 +69,24 @@ sudo apt-get install \
 <!--- software-properties-common ?
 - libfonconfig-dev ?-->
 
-## Building
+Now either [download](#download) the latest binary, or [build from source](#building-from-source).
+
+## Download
+
+Pre-compiled binaries can be found in the [the latest release](https://github.com/Jomy10/photobooth/releases/latest).
+
+You can also use this one-liner to download the latest release:
+```sh
+wget \
+    "$( \
+        curl -s https://api.github.com/repos/jomy10/photobooth/releases/latest |
+        jq -r '.assets[] | select(.name=="Photobooth") | .browser_download_url' \
+    )" -o photobooth && chmod +x photobooth
+```
+
+The command requires `jq` to parse json, which can be downloaded with `sudo apt-get install jq`.
+
+## Building from source
 
 This program uses the experimental `mpmc` channels, so it requires nightly.
 
@@ -40,9 +94,16 @@ This program uses the experimental `mpmc` channels, so it requires nightly.
 cargo +nightly build --release
 ```
 
+# Configuration
+
+The `PH_CONFIG` environment variable can be set to point to a config file (yaml).
+Definition and defaults can be found in [config.rs](./src/config.rs).
+
 ## Automatically mounting USB devices
 
-See [autmount](./automount).
+The photobooth application expects a USB storage device to be mounted. Using the
+[automount](./automount) utility in this repository, you can set up a service
+to automatically mount all USB devices connected to the PI.
 
 ## Permissions
 
@@ -74,3 +135,25 @@ Reboot if necessary:
 ```sh
 sudo reboot
 ```
+
+## License
+
+[GNU GPL](LICENSE).
+
+Photobooth: Photobooth software for touch screen devices<br/>
+Copyright (C) 2024 Jonas Everaert
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+[Dependencies may be licensed differently](LICENSE_DEPENDENCIES).
