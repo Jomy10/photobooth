@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>SwiftCurses</h1>
+  <h1>Photobooth</h1>
 </div><br/>
 
 **Navigation**
