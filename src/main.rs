@@ -15,6 +15,7 @@ use image::{ImageBuffer, ImageFormat};
 use log::*;
 use photobooth::camera::{Camera, CameraManager};
 use photobooth::display::Display;
+use photobooth::files::{self, FileManager};
 use photobooth::input::InputManager;
 use photobooth::ui::{TextBox, UIElement, UI};
 use photobooth::utils::UnsafePtr;
@@ -26,27 +27,43 @@ enum AppState {
     TakingPicture,
     /// Capture
     TakePicture,
+
+    Error
 }
 
 impl AppState {
     fn show_video_stream(&self) -> bool {
         return *self == AppState::TakingPicture;
     }
+
+    fn bg_color(&self, config: &photobooth::config::Config) -> u32 {
+        match self {
+            AppState::Error => config.error_bg_color,
+            _ => config.bg_color
+        }
+    }
 }
 
 struct App<'a> {
     config: photobooth::config::Config,
+
     disp: Display,
+    ui: UI,
+    time_sensitive_ui: Vec<(Rc<RefCell<TextBox>>, TimeDelta, Box<dyn Fn(TimeDelta, TimeDelta, &Rc<RefCell<TextBox>>) -> ()>)>,
+
     camera: Camera<'a>,
     camera_receiver: std::sync::mpmc::Receiver<libcamera::request::Request>,
-    ui: UI,
+
+    // must be kept alive to send input events to UI
     #[allow(unused)]
     input: InputManager,
-    time_sensitive_ui: Vec<(Rc<RefCell<TextBox>>, TimeDelta, Box<dyn Fn(TimeDelta, TimeDelta, &Rc<RefCell<TextBox>>) -> ()>)>,
+
+    file_manager: Option<FileManager>,
+
+    state: AppState,
+    error_message: Option<String>,
     state_change_receiver: Receiver<AppState>,
     state_change_sender: Sender<AppState>,
-
-    state: AppState
 }
 
 impl<'a> App<'a> {
@@ -83,6 +100,18 @@ impl<'a> App<'a> {
 
         let (state_change_sender, state_change_receiver) = std::sync::mpsc::channel();
 
+        // TODO: show selection when multiple USB devices are present instead of just the first one
+        let usb_devices = files::usb::StorageDevices::collect();
+        let file_manager = usb_devices.drives().first().map(|usb_device| {
+            info!("Storage device: {:?}", usb_device.name());
+            info!("Storage available: {}", usb_device.available_space());
+            let usb_device_path = config.storage_sub_path.clone().map(|subpath| usb_device.mount_point().join(subpath))
+                .unwrap_or(usb_device.mount_point().to_path_buf());
+            FileManager::new(usb_device_path)
+        }).map_or(Ok(None), |v| v.map(Some))?;
+
+        let error_message = if file_manager.is_none() { Some(config.error_no_usb_device.clone()) } else { None };
+
         return Ok(App {
             config,
             disp,
@@ -90,14 +119,33 @@ impl<'a> App<'a> {
             camera_receiver,
             ui,
             input,
-            state: AppState::TakePicturePrompt,
+            state: if file_manager.is_none() { AppState::Error } else { AppState::TakePicturePrompt },
             time_sensitive_ui: Vec::new(),
             state_change_receiver,
             state_change_sender,
+            file_manager,
+            error_message
         });
     }
 
+    /// Run the application. Keep running when an error occurs and show the
+    /// error message on screen
+    pub fn run_with_error(&mut self) {
+        loop {
+            match self.run() {
+                Ok(_) => return,
+                Err(err) => {
+                    error!("{}", err);
+                    self.error_message = Some(err.to_string());
+                    self.state = AppState::Error;
+                    trace!("State is now: {:?}", self.state);
+                },
+            }
+        }
+    }
+
     pub fn run(&mut self) -> Result<()> {
+        trace!("Running with state = {:?}", self.state);
         self.transition(None, self.state)?;
 
         let mut req: Option<libcamera::request::Request> = None;
@@ -114,7 +162,7 @@ impl<'a> App<'a> {
                 let fb_ptr = self.camera.video_stream().get_mapped_buffer(req.as_ref().unwrap().cookie());
                 unsafe { self.disp.copy_dma_buf(fb_ptr, self.camera.video_stream().get_frame_size() as usize)? };
             } else {
-                self.disp.clear(self.config.bg_color)?;
+                self.disp.clear(self.state.bg_color(&self.config))?;
             }
 
             // Update UI
@@ -151,6 +199,12 @@ impl<'a> App<'a> {
         }
     }
 
+    // fn set_error(&mut self, message: impl std::fmt::Display) -> Result<()> {
+    //     self.error_message = Some(message.to_string());
+    //     self.state_change_sender.send(AppState::Error)?;
+    //     Ok(())
+    // }
+
     pub fn transition(&mut self, previous_state: Option<AppState>, state: AppState) -> Result<()> {
         self.state = state;
         self.time_sensitive_ui.clear();
@@ -160,6 +214,9 @@ impl<'a> App<'a> {
             Some(AppState::TakingPicture) => {
                 self.camera.stop_stream()?;
             },
+            Some(AppState::Error) => {
+                self.error_message = None;
+            }
             Some(_) | None => {},
         }
 
@@ -179,6 +236,10 @@ impl<'a> App<'a> {
                 }));
             },
             AppState::TakingPicture => {
+                if self.file_manager.is_none() {
+                    anyhow::bail!(self.config.error_no_usb_device.clone());
+                }
+
                 self.camera.start_stream()?;
                 let textbox = self.ui.add_text_box(
                     (0., 0.),
@@ -207,9 +268,15 @@ impl<'a> App<'a> {
                 })))
             },
             AppState::TakePicture => {
-                let file_name = "test.png";
+                let Some(file_manager) = &mut self.file_manager else {
+                    anyhow::bail!(self.config.error_no_usb_device.clone());
+                };
+                let image_format = ImageFormat::Jpeg;
+                let file_name = file_manager.next_image_location(image_format.extensions_str().first().unwrap());
+                if file_name.exists() { anyhow::bail!("File {:?} already exists", file_name) }
                 let file = File::create(file_name)?;
                 let mut writer = BufWriter::new(file);
+
                 let (capture_sender, capture_waiter) = std::sync::mpsc::channel();
                 let (image_sender, image_waiter) = std::sync::mpsc::channel();
                 let (signal_continue, waiter) = std::sync::mpsc::channel();
@@ -220,7 +287,7 @@ impl<'a> App<'a> {
                     let camera: &mut Camera = unsafe { camera.as_mut() };
                     camera.capture(
                         &mut writer,
-                        ImageFormat::Png,
+                        image_format,
                         Some(capture_sender),
                         Some(image_sender),
                         Some(waiter)
@@ -293,6 +360,23 @@ impl<'a> App<'a> {
 
                 self.state_change_sender.send(AppState::TakePicturePrompt)?;
             },
+            AppState::Error => {
+                let textbox = self.ui.add_text_box(
+                    (0., 0.),
+                    (self.disp.size().0 as f32, self.disp.size().1 as f32),
+                    fontdue::layout::HorizontalAlign::Center,
+                    fontdue::layout::VerticalAlign::Middle
+                );
+                textbox.borrow_mut().add_text(self.error_message.as_ref().unwrap_or(&self.config.unknown_error_message), self.config.text_size);
+                let sleep_time = self.config.error_message_time;
+                let sender = self.state_change_sender.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_secs(sleep_time as u64));
+                    _ = sender.send(AppState::TakePicturePrompt).inspect_err(|err| {
+                        warn!("{:?}", err);
+                    });
+                });
+            }
         }
 
         Ok(())
@@ -368,7 +452,7 @@ fn main() -> Result<()> {
     let camera_manager = CameraManager::acquire()?;
 
     let mut app = App::new(config, &camera_manager)?;
-    app.run()?;
+    app.run_with_error();
 
     Ok(())
 }

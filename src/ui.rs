@@ -7,6 +7,7 @@ use fontdue::Font;
 use log::*;
 
 use crate::input::TouchInputEvent;
+use crate::utils;
 
 type Fonts = Rc<[Font; 2]>;
 type BoxedUIElement = Box<Rc<RefCell<dyn UIElement>>>;
@@ -24,7 +25,7 @@ impl UI {
         // TODO: replace
         let font = include_bytes!("../SpaceMono-Bold.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(font, fontdue::FontSettings::default()).unwrap();
-        let font2 = include_bytes!("../NotoColorEmoji-Regular.ttf") as &[u8];
+        let font2 = include_bytes!("../NotoEmoji-VariableFont_wght.ttf") as &[u8];
         let font2 = fontdue::Font::from_bytes(font2, fontdue::FontSettings::default()).unwrap();
 
         let fonts = Rc::new([font, font2]);
@@ -117,7 +118,16 @@ impl TextBox {
     }
 
     pub fn add_text(&mut self, text: impl AsRef<str>, font_size: f32) {
-        self.layout.append(self.fonts.as_slice(), &TextStyle::new(text.as_ref(), font_size, 0));
+        let text = utils::split_emojis(text.as_ref());
+        trace!("text split: {:?}", text);
+
+        for text in text.into_iter() {
+            let font = match text.0 {
+                utils::TextSequenceKind::Text => 0,
+                utils::TextSequenceKind::Emoji => 1,
+            };
+            self.layout.append(self.fonts.as_slice(), &TextStyle::new(text.1, font_size, font));
+        }
     }
 
     pub fn clear(&mut self) {
@@ -128,7 +138,7 @@ impl TextBox {
 impl UIElement for TextBox {
     fn render(&self, buffer: &mut [u8], buffer_size: (usize, usize)) {
         for glyph in self.layout.glyphs() {
-            let (metrics, bitmap) = self.fonts[0].rasterize(glyph.parent, glyph.key.px);
+            let (metrics, bitmap) = self.fonts[glyph.font_index].rasterize(glyph.parent, glyph.key.px);
 
             let x = glyph.x as usize;
             let y = glyph.y as usize;
@@ -170,9 +180,12 @@ fn blend_font_grayscale_bitmap_to_buffer(
 
             if fb_x < fb_size.0 && fb_y < fb_size.1 {
                 let index = (fb_y * fb_size.0 + fb_x) * 4;
-                fb[index    ] = fb[index    ].saturating_add(f32::round((((color & 0xFF000000)      ) as f32) * ((coverage as f32) / 255.)) as u8);
-                fb[index + 1] = fb[index + 1].saturating_add(f32::round((((color & 0x00FF0000) << 8 ) as f32) * ((coverage as f32) / 255.)) as u8);
-                fb[index + 2] = fb[index + 2].saturating_add(f32::round((((color & 0x0000FF00) << 16) as f32) * ((coverage as f32) / 255.)) as u8);
+                fb[index    ] = ((color & 0xFF000000) >> 24) as u8;
+                fb[index + 1] = ((color & 0x00FF0000) >> 16) as u8;
+                fb[index + 2] = ((color & 0x0000FF00) >> 8) as u8;
+            //     fb[index    ] = fb[index    ].saturating_add(f32::round((((color & 0xFF000000) >> 24) as f32) * ((coverage as f32) / 255.)) as u8);
+            //     fb[index + 1] = fb[index + 1].saturating_add(f32::round((((color & 0x00FF0000) >> 16) as f32) * ((coverage as f32) / 255.)) as u8);
+            //     fb[index + 2] = fb[index + 2].saturating_add(f32::round((((color & 0x0000FF00) >> 8) as f32) * ((coverage as f32) / 255.)) as u8);
             }
         }
     }
