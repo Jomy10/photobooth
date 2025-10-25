@@ -5,7 +5,8 @@ use std::os::fd::RawFd;
 use std::pin::Pin;
 use std::sync::Arc;
 
-use image::{EncodableLayout, ImageFormat, Rgba};
+use image::codecs::jpeg::JpegEncoder;
+use image::{DynamicImage, EncodableLayout, ImageFormat, Rgba};
 use libcamera::camera::ActiveCamera;
 use anyhow::{anyhow, Result};
 use libcamera::camera_manager::CameraList;
@@ -262,7 +263,9 @@ impl<'cam> Camera<'cam> {
         image_format: ImageFormat,
         // Send the mapped fd of the captured image
         on_capture_sender: Option<std::sync::mpsc::Sender<()>>,
-        on_image_creation_sender: Option<std::sync::mpsc::Sender<Arc<image::ImageBuffer<Rgba<u8>, Vec<u8>>>>>,
+        on_image_creation_sender: Option<std::sync::mpsc::Sender<
+            Arc<image::ImageBuffer<Rgba<u8>, Vec<u8>>>
+        >>,
         continue_waiter: Option<std::sync::mpsc::Receiver<()>>,
     ) -> Result<()> {
         trace!("Capturing picture...");
@@ -323,16 +326,49 @@ impl<'cam> Camera<'cam> {
 
         trace!("Displaying image data and writing to file");
 
-        let img_buffer = Arc::new(img_buffer);
-        if let Some(sender) = on_image_creation_sender {
-            sender.send(img_buffer.clone())?;
-        }
+        let alpha_supported = match image_format {
+            ImageFormat::Png
+                | ImageFormat::Gif
+                | ImageFormat::WebP
+                | ImageFormat::Tiff
+                | ImageFormat::Tga
+                | ImageFormat::Dds
+                | ImageFormat::Ico
+                | ImageFormat::Hdr
+                | ImageFormat::OpenExr
+                | ImageFormat::Avif
+                | ImageFormat::Bmp => true,
+            _ => false
+        };
 
-        img_buffer.write_to(result_file_writer, image_format)?;
+
+        if alpha_supported {
+            let img_buffer = Arc::new(img_buffer);
+            if let Some(sender) = on_image_creation_sender {
+                sender.send(img_buffer.clone())?;
+            }
+
+            img_buffer.write_to(result_file_writer, image_format)?;
+        } else {
+            if let Some(sender) = on_image_creation_sender {
+                sender.send(Arc::new(img_buffer.clone()))?;
+            }
+
+            let rgb8_image = DynamicImage::from(img_buffer).into_rgb8();
+
+            if image_format == ImageFormat::Jpeg {
+                let mut encoder = JpegEncoder::new_with_quality(result_file_writer, 85);
+                encoder.encode(rgb8_image.as_bytes(), rgb8_image.width(), rgb8_image.height(), image::ExtendedColorType::Rgb8)?;
+            } else {
+                rgb8_image.write_to(result_file_writer, image_format)?;
+            }
+        };
+
 
         trace!("Image written with buffered writer with format {:?}", image_format);
 
         if let Some(waiter) = continue_waiter {
+            trace!("Waiting for continue signal");
             waiter.recv()?;
         }
 

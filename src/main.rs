@@ -1,5 +1,6 @@
 #![feature(mpmc_channel)]
 
+use std::backtrace::BacktraceStatus;
 use std::cell::RefCell;
 use std::fs::File;
 use std::io::{self, BufReader, BufWriter};
@@ -101,14 +102,7 @@ impl<'a> App<'a> {
         let (state_change_sender, state_change_receiver) = std::sync::mpsc::channel();
 
         // TODO: show selection when multiple USB devices are present instead of just the first one
-        let usb_devices = files::usb::StorageDevices::collect();
-        let file_manager = usb_devices.drives().first().map(|usb_device| {
-            info!("Storage device: {:?}", usb_device.name());
-            info!("Storage available: {}", usb_device.available_space());
-            let usb_device_path = config.storage_sub_path.clone().map(|subpath| usb_device.mount_point().join(subpath))
-                .unwrap_or(usb_device.mount_point().to_path_buf());
-            FileManager::new(usb_device_path)
-        }).map_or(Ok(None), |v| v.map(Some))?;
+        let file_manager = Self::create_file_manager(&config)?;
 
         let error_message = if file_manager.is_none() { Some(config.error_no_usb_device.clone()) } else { None };
 
@@ -136,9 +130,11 @@ impl<'a> App<'a> {
                 Ok(_) => return,
                 Err(err) => {
                     error!("{}", err);
+                    if err.backtrace().status() == BacktraceStatus::Captured {
+                        error!("{}", err.backtrace());
+                    }
                     self.error_message = Some(err.to_string());
                     self.state = AppState::Error;
-                    trace!("State is now: {:?}", self.state);
                 },
             }
         }
@@ -237,7 +233,11 @@ impl<'a> App<'a> {
             },
             AppState::TakingPicture => {
                 if self.file_manager.is_none() {
-                    anyhow::bail!(self.config.error_no_usb_device.clone());
+                    // Try to connect to a USB storage device first
+                    self.file_manager = Self::create_file_manager(&self.config)?;
+                    if self.file_manager.is_none() {
+                        anyhow::bail!(self.config.error_no_usb_device.clone());
+                    }
                 }
 
                 self.camera.start_stream()?;
@@ -301,7 +301,18 @@ impl<'a> App<'a> {
                 }
 
                 // White out screen when image captured
-                capture_waiter.recv()?;
+                match capture_waiter.recv() {
+                    Ok(_) => {},
+                    Err(err) => {
+                        _ = signal_continue.send(()); // signal continue in case camera thread is still running
+                        let res = camera_thread_handle.join().map_err(|err| anyhow!(format!("{:?}", err))).and_then(|res| res.map_err(|err| anyhow!(err)));
+                        let err = match res {
+                            Ok(_) => anyhow!(err),
+                            Err(err) => err,
+                        };
+                        return Err(err);
+                    },
+                }
                 self.disp.swap_buffers()?;
 
                 // Get image and show on screen
@@ -352,7 +363,9 @@ impl<'a> App<'a> {
 
                 self.disp.swap_buffers()?;
 
-                signal_continue.send(())?;
+                _ = signal_continue.send(()).inspect_err(|err| {
+                    warn!("{:?}", err);
+                });
 
                 std::thread::sleep(std::time::Duration::from_secs(self.config.show_image_time as u64));
 
@@ -380,6 +393,19 @@ impl<'a> App<'a> {
         }
 
         Ok(())
+    }
+
+    fn create_file_manager(config: &photobooth::config::Config) -> Result<Option<FileManager>> {
+        let usb_devices = files::usb::StorageDevices::collect();
+        usb_devices.drives().first().map(|drive| {
+            info!("Storage device: {:?}", drive.name());
+            info!("Storage available: {}", drive.available_space());
+            config.storage_sub_path.clone().map(|subpath| drive.mount_point().join(subpath))
+                .unwrap_or(drive.mount_point().to_path_buf())
+        }).map(|mount_path| {
+            info!("USB mount point: {:?}", mount_path);
+            FileManager::new(mount_path)
+        }).map_or(Ok(None), |v| v.map(Some))
     }
 }
 

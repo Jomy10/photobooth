@@ -30,10 +30,11 @@ impl FileManager {
                 continue;
             }
 
-            let index: usize = match basename.strip_prefix("image").unwrap().parse::<usize>() {
+            let image_index = basename.strip_prefix("image").unwrap();
+            let index: usize = match image_index.parse::<usize>() {
                 Ok(index) => index,
                 Err(err) => {
-                    warn!("Error while parsing image index: {:?}", err);
+                    warn!("Error while parsing image index '{}': {:?}", image_index, err);
                     continue;
                 },
             };
@@ -58,8 +59,8 @@ impl FileManager {
     }
 
     pub fn next_image_location(&mut self, ext: &str) -> PathBuf {
-        let path = self.write_location.join(format!("image{}{}", self.max_index, ext));
         self.max_index += 1;
+        let path = self.write_location.join(format!("image{}.{}", self.max_index, ext));
         return path;
     }
 }
