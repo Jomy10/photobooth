@@ -1,0 +1,2 @@
+ACTION=="add", KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", RUN+="/bin/systemctl --no-block start automount@%k.service"
+ACTION=="remove", KERNEL=="sd[a-z][0-9]", SUBSYSTEMS=="usb", RUN+="/bin/systemctl --no-block stop automount@%k.service"
