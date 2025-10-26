@@ -4,7 +4,6 @@ use std::mem::MaybeUninit;
 pub unsafe fn abgr_to_rgb(abgr_buffer: &[u8], width: usize, height: usize) -> Vec<u8> {
     let mut rgb_buffer = vec![MaybeUninit::uninit(); width * height * 3];
 
-    let chunks_count = abgr_buffer.chunks_exact(4).count();
     // TODO: rayon par_iter?
     for (i, chunk) in abgr_buffer.chunks_exact(4).enumerate() {
         let rgb_index = i * 3;

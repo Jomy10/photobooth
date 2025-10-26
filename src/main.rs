@@ -367,11 +367,22 @@ impl<'a> App<'a> {
                     warn!("{:?}", err);
                 });
 
-                std::thread::sleep(std::time::Duration::from_secs(self.config.show_image_time as u64));
+                let t = Utc::now();
 
                 camera_thread_handle.join().map_err(|err| anyhow!("{:?}", err))??;
 
+                let file = File::open(&file_name)?;
+                if file.metadata()?.len() == 0 {
+                    anyhow::bail!(self.config.error_empty_file_witten.clone());
+                }
+
                 info!("Picture written to {:?}", file_name);
+
+                let dt = Utc::now() - t;
+                let sleep_time = std::time::Duration::from_secs(self.config.show_image_time as u64);
+                let sleep_time = (sleep_time.as_millis() as u64).saturating_sub(dt.num_milliseconds() as u64);
+                let sleep_time = std::time::Duration::from_millis(sleep_time);
+                std::thread::sleep(sleep_time);
 
                 self.state_change_sender.send(AppState::TakePicturePrompt)?;
             },

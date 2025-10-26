@@ -42,6 +42,8 @@ pub struct Config {
     pub unknown_error_message: String,
     #[serde(rename = "errorNoUsbDevice")]
     pub error_no_usb_device: String,
+    #[serde(rename = "errorEmptyFileWritten")]
+    pub error_empty_file_witten: String,
 }
 
 impl Default for Config {
@@ -67,6 +69,7 @@ impl Default for Config {
             error_message_time: 8,
             unknown_error_message: "Unkown error".to_string(),
             error_no_usb_device: "No USB device connected".to_string(),
+            error_empty_file_witten: "File couldn't be written to (file is empty)".to_string(),
         }
     }
 }

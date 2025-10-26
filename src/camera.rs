@@ -344,12 +344,13 @@ impl<'cam> Camera<'cam> {
         };
 
         if alpha_supported {
-            let img_buffer = Arc::new(img_buffer);
-            if let Some(sender) = on_image_creation_sender {
-                sender.send(img_buffer.clone())?;
-            }
+            unimplemented!("Image format currently not supported");
+            // let img_buffer = Arc::new(img_buffer);
+            // if let Some(sender) = on_image_creation_sender {
+            //     sender.send(img_buffer.clone())?;
+            // }
 
-            img_buffer.write_to(result_file_writer, image_format)?;
+            // img_buffer.write_to(result_file_writer, image_format)?;
         } else {
             let (width, height) = (img_buffer.width(), img_buffer.height());
             if let Some(sender) = on_image_creation_sender {
@@ -357,25 +358,12 @@ impl<'cam> Camera<'cam> {
             }
 
             let rgb_buffer = unsafe { abgr_to_rgb(img_data, width as usize, height as usize) };
-            // let abgr_buffer = &img_buffer;
-            // let mut rgb8_buffer: Vec<MaybeUninit<u8>> = vec![MaybeUninit::uninit(); (img_buffer.len() / 4) * 3];
-            // let buf = UnsafePtr { ptr: rgb8_buffer.as_mut_ptr() };
-            // unsafe { img_buffer.as_parallel_slice().align_to::<u32>().1 }.par_iter().enumerate().for_each(|(i, v)| {
-            //     let i = i / 4;
-            //     let v: [u8; 4] = v.to_ne_bytes();
-            //     unsafe {
-            //         (*(buf.as_mut_ptr().offset((i + 2).try_into().unwrap()))) = MaybeUninit::new(v[0]); // B
-            //         (*(buf.as_mut_ptr().offset((i + 1).try_into().unwrap()))) = MaybeUninit::new(v[1]); // G
-            //         (*(buf.as_mut_ptr().offset((i    ).try_into().unwrap()))) = MaybeUninit::new(v[2]); // R
-            //     }
-            // });
-            // let rgb8_buffer: Vec<u8> = unsafe { std::mem::transmute(rgb8_buffer) };
 
             if image_format == ImageFormat::Jpeg {
                 let mut encoder = JpegEncoder::new_with_quality(result_file_writer, 85);
                 encoder.encode(rgb_buffer.as_slice(), width, height, image::ExtendedColorType::Rgb8)?;
             } else {
-                anyhow::bail!("Untested image format"); // TODO
+                unimplemented!("Image format currently not supported");
             }
         };
 
