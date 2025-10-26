@@ -63,4 +63,8 @@ impl FileManager {
         let path = self.write_location.join(format!("image{}.{}", self.max_index, ext));
         return path;
     }
+
+    pub fn write_loc_exists(&self) -> bool {
+        self.write_location.exists()
+    }
 }

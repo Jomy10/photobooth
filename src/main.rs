@@ -232,7 +232,7 @@ impl<'a> App<'a> {
                 }));
             },
             AppState::TakingPicture => {
-                if self.file_manager.is_none() {
+                if self.file_manager.is_none() || !self.file_manager.as_ref().unwrap().write_loc_exists() {
                     // Try to connect to a USB storage device first
                     self.file_manager = Self::create_file_manager(&self.config)?;
                     if self.file_manager.is_none() {
@@ -274,7 +274,7 @@ impl<'a> App<'a> {
                 let image_format = ImageFormat::Jpeg;
                 let file_name = file_manager.next_image_location(image_format.extensions_str().first().unwrap());
                 if file_name.exists() { anyhow::bail!("File {:?} already exists", file_name) }
-                let file = File::create(file_name)?;
+                let file = File::create(&file_name)?;
                 let mut writer = BufWriter::new(file);
 
                 let (capture_sender, capture_waiter) = std::sync::mpsc::channel();
@@ -350,13 +350,9 @@ impl<'a> App<'a> {
                 let resized_image = image_processing_thread_handle.join().map_err(|err| anyhow!("{:?}", err))??;
 
                 let dt = Utc::now() - t;
-                dbg!(dt, t);
                 let sleep_time = std::time::Duration::from_secs(self.config.done_show_time as u64);
-                dbg!(sleep_time);
                 let sleep_time = (sleep_time.as_millis() as u64).saturating_sub(dt.num_milliseconds() as u64);
-                dbg!(sleep_time);
                 let sleep_time = std::time::Duration::from_millis(sleep_time);
-                dbg!(sleep_time);
                 std::thread::sleep(sleep_time);
 
                 // Show image
@@ -374,6 +370,8 @@ impl<'a> App<'a> {
                 std::thread::sleep(std::time::Duration::from_secs(self.config.show_image_time as u64));
 
                 camera_thread_handle.join().map_err(|err| anyhow!("{:?}", err))??;
+
+                info!("Picture written to {:?}", file_name);
 
                 self.state_change_sender.send(AppState::TakePicturePrompt)?;
             },

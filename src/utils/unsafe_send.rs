@@ -16,6 +16,10 @@ impl<T> UnsafePtr<T> {
     pub unsafe fn as_mut(&self) -> &mut T {
         unsafe { &mut *self.ptr }
     }
+
+    pub fn as_mut_ptr(&self) -> *mut T {
+        self.ptr
+    }
 }
 
 unsafe impl<T> Send for UnsafePtr<T> {}
