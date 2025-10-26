@@ -83,7 +83,7 @@ impl<'a> App<'a> {
 
         // Camera
         info!("Initializing camera");
-        let mut camera = Camera::new(&cam_manager, format_u32)?;
+        let mut camera = Camera::new(&cam_manager, format_u32, config.screen_width, config.screen_height)?;
 
         // camera.queue_video_requests()?;
         let camera_receiver = camera.on_request_receiver();

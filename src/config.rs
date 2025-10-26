@@ -44,6 +44,12 @@ pub struct Config {
     pub error_no_usb_device: String,
     #[serde(rename = "errorEmptyFileWritten")]
     pub error_empty_file_witten: String,
+
+    // System
+    #[serde(rename = "screenWidth")]
+    pub screen_width: u32,
+    #[serde(rename = "screenHeight")]
+    pub screen_height: u32,
 }
 
 impl Default for Config {
@@ -70,6 +76,9 @@ impl Default for Config {
             unknown_error_message: "Unkown error".to_string(),
             error_no_usb_device: "No USB device connected".to_string(),
             error_empty_file_witten: "File couldn't be written to (file is empty)".to_string(),
+
+            screen_width: 1920,
+            screen_height: 1080,
         }
     }
 }

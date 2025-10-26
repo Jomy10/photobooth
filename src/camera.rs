@@ -45,6 +45,8 @@ impl CameraManager {
     }
 }
 
+// TODO: redirect libcamera logging to log. This requires modifying libcamera bindings
+// Picture settings: https://lit-robotics.github.io/libcamera-rs/libcamera/controls/index.html
 pub struct Camera<'cam> {
     #[allow(unused)]
     camera: Pin<Box<libcamera::camera::Camera<'cam>>>,
@@ -57,7 +59,7 @@ pub struct Camera<'cam> {
 }
 
 impl<'cam> Camera<'cam> {
-    pub fn new(manager: &'cam crate::camera::CameraManager, format: u32) -> Result<Self> {
+    pub fn new(manager: &'cam crate::camera::CameraManager, format: u32, screen_width: u32, screen_height: u32) -> Result<Self> {
         let first_camera = Box::pin(manager.cameras()
             .get(0)
             .ok_or_else(|| anyhow!("No cameras found"))?);
@@ -74,8 +76,8 @@ impl<'cam> Camera<'cam> {
         stream_cfg.set_pixel_format(PixelFormat::new(format, 0));
         // Use 1080p resolution to match display
         stream_cfg.set_size(libcamera::geometry::Size {
-            width: 1920,
-            height: 1080
+            width: screen_width,
+            height: screen_height,
         });
 
         match config.validate() {
