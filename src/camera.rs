@@ -10,6 +10,7 @@ use image::{EncodableLayout, ImageFormat, Rgba};
 use libcamera::camera::ActiveCamera;
 use anyhow::{anyhow, Result};
 use libcamera::camera_manager::CameraList;
+use libcamera::controls::*;
 use libcamera::framebuffer::AsFrameBuffer;
 use libcamera::framebuffer_allocator::FrameBuffer;
 use libcamera::pixel_format::PixelFormat;
@@ -144,10 +145,6 @@ impl<'cam> Camera<'cam> {
         &mut self.active_camera
     }
 
-    // pub fn on_request_completed(&mut self, cb: impl FnMut(libcamera::request::Request) + Send + 'cam) {
-    //     self.active_camera_mut().on_request_completed(cb);
-    // }
-
     pub fn on_request_receiver(&mut self) -> std::sync::mpmc::Receiver<libcamera::request::Request> {
         return self.on_request_completed_receiver.clone();
     }
@@ -275,15 +272,20 @@ impl<'cam> Camera<'cam> {
         self.stop_camera()?;
 
         let cam = self.active_camera_mut();
-        // let cam = self.active_camera_mut();
-
-        // cam.stop()?;
 
         // Configure for StillCapture
         let (buffer, frame_size, img_size, still_stream) = Self::configure_still_capture(cam, PixelFormat::new(u32::from_le_bytes([b'X', b'R', b'2', b'4']), 0))?;
 
         let mut request = cam.create_request(None).ok_or_else(|| anyhow!("Couldn't create still capture request"))?;
         request.add_buffer(&still_stream, buffer)?;
+        let controls = request.controls_mut();
+        match controls.set(AfMode::Auto)
+            .and_then(|_| controls.set(AfRange::Normal))
+            .and_then(|_| controls.set(AfTrigger::Start))
+        {
+            Ok(_) => {},
+            Err(err) => error!("Failed to autofocus: {:?}", err),
+        }
 
         trace!("Queueing still capture request {:?}", request);
 
@@ -455,6 +457,11 @@ impl VideoStream {
             .map(|(i, buffer)| {
                 let mut request = cam.create_request(Some(i as u64)).expect("Couldn't create request");
                 request.add_buffer(&video_stream, buffer)?;
+                let controls = request.controls_mut();
+                match controls.set(AfMode::Continuous) {
+                    Ok(_) => {},
+                    Err(err) => error!("Failed to set continuous autofocus: {:?}", err),
+                }
                 Ok(request)
             }).collect::<Result<_>>()?;
         let requests_count = requests.len();
