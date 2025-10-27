@@ -1,5 +1,6 @@
 <div align="center">
-  <h1>Photobooth</h1>
+  <h1>📸 Photobooth</h1>
+  <p>A photobooth application for the raspberry pi and pi camera</p>
 </div><br/>
 
 **Navigation**
