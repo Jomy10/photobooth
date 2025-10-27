@@ -1,6 +1,6 @@
 <div align="center">
   <h1>📸 Photobooth</h1>
-  <p>A photobooth application for the raspberry pi and pi camera</p>
+  <p>A photobooth application for the Raspberry Pi and Pi camera</p>
 </div><br/>
 
 https://github.com/user-attachments/assets/19b1c76b-2000-4e29-a9ea-37e35ef21a2d
