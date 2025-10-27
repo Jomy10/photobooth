@@ -14,6 +14,8 @@
   - [Automatically mounting USB devices](#automatically-mounting-usb-devices)
   - [Permissions](#permissions)
   - [Boot config](#boot-config)
+- [Additional notes](#additional-notes)
+- [Questions](#questions)
 - [License](#license)
 
 # Setup
@@ -42,9 +44,10 @@ In addition to the pi, screen and camera, a USB stick also needs to be connected
     - go to *System Options*
     - go to *Boot / Auto Login*
     - Select *Console Autologin*
-4. [Install the photobooth software](#Install); either [build it from soure](#building-from-source) or [download the latest binary](#download)
-5. [Configure the photobooth software](#configure)
-6. Start photobooth at boot:
+4. [Edit the boot config](#boot-config)
+5. [Install the photobooth software](#Install); either [build it from soure](#building-from-source) or [download the latest binary](#download)
+6. [Configure the photobooth software](#configuration)
+7. Start photobooth at boot:
     add the following to the end of ~/.bashrc:
     ```sh
     # Replace this with the path to your config file (or comment it out to
@@ -55,7 +58,7 @@ In addition to the pi, screen and camera, a USB stick also needs to be connected
     # This line will start the application
     ./photobooth
     ```
-7. Reboot the pi: `reboot`
+8. Reboot the pi: `reboot`
 
 # Install
 
@@ -67,8 +70,6 @@ sudo apt-get install \
   libcamera-dev \
   libdrm-dev
 ```
-<!--- software-properties-common ?
-- libfonconfig-dev ?-->
 
 Now either [download](#download) the latest binary, or [build from source](#building-from-source).
 
@@ -105,7 +106,8 @@ The application will now be located at `target/release/photobooth`.
 # Configuration
 
 The `PH_CONFIG` environment variable can be set to point to a config file (yaml).
-Definition and defaults can be found in [config.rs](./src/config.rs).
+Definition and defaults can be found in [config.rs](./src/config.rs). Here,
+translations can be added tailored to the end user of the photobooth.
 
 ## Automatically mounting USB devices
 
@@ -144,11 +146,15 @@ Reboot if necessary:
 sudo reboot
 ```
 
-## Additional notes
+# Additional notes
 
 - I have used a PI with 2GB of RAM, 1GB might not be enough.
 
-## License
+# Questions
+
+For any questions, feel free to [open an issue](https://github.com/Jomy10/photobooth/issues/new/choose).
+
+# License
 
 [GNU GPL](LICENSE).
 
