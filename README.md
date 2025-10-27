@@ -3,6 +3,8 @@
   <p>A photobooth application for the raspberry pi and pi camera</p>
 </div><br/>
 
+https://github.com/user-attachments/assets/19b1c76b-2000-4e29-a9ea-37e35ef21a2d
+
 **Navigation**
 - [Setup](#setup)
   - [Hardware](#hardware)
@@ -32,6 +34,9 @@ requests adding support for them, or simply letting me know this application
 also works on a different hardware configuration.
 
 In addition to the pi, screen and camera, a USB stick also needs to be connected and mounted on the pi (see the [configuration section for auto mounting USB storage devices](#automatically-mounting-usb-devices)). Images will be saved on this USB stick for easy transfering to another computer.
+
+![back](https://github.com/user-attachments/assets/f9275a29-b301-4121-b4ad-38c7947d53bb)
+![front](https://github.com/user-attachments/assets/48ee3539-b253-4d08-8f4f-0b7b884b3347)
 
 ## Software
 
