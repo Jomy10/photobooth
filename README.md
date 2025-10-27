@@ -31,6 +31,8 @@ This application has not been tested on other hardware, but I am open to pull
 requests adding support for them, or simply letting me know this application
 also works on a different hardware configuration.
 
+In addition to the pi, screen and camera, a USB stick also needs to be connected and mounted on the pi (see the [configuration section for auto mounting USB storage devices](#automatically-mounting-usb-devices)). Images will be saved on this USB stick for easy transfering to another computer.
+
 ## Software
 
 1. Install a new copy of **Raspbery Pi OS Lite (64-bit)** on your Raspberry Pi's SD-card
@@ -39,9 +41,10 @@ also works on a different hardware configuration.
     - `sudo raspi-config`
     - go to *System Options*
     - go to *Boot / Auto Login*
-    - Select *Console Auutologin*
+    - Select *Console Autologin*
 4. [Install the photobooth software](#Install); either [build it from soure](#building-from-source) or [download the latest binary](#download)
-5. Start photobooth at boot:
+5. [Configure the photobooth software](#configure)
+6. Start photobooth at boot:
     add the following to the end of ~/.bashrc:
     ```sh
     # Replace this with the path to your config file (or comment it out to
@@ -52,9 +55,7 @@ also works on a different hardware configuration.
     # This line will start the application
     ./photobooth
     ```
-6. Reboot the pi: `reboot`
-7. [Install the photobooth software](#install)
-8. [Configure the photobooth software](#configure)
+7. Reboot the pi: `reboot`
 
 # Install
 
